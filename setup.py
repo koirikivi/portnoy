@@ -19,6 +19,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'python-dotenv',
+        'alpaca-trade-api',
     ],
     extras_require={
         'dev': [
