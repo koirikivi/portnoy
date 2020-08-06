@@ -20,6 +20,7 @@ setup(
     install_requires=[
         'python-dotenv',
         'alpaca-trade-api',
+        'python-twitter',
     ],
     extras_require={
         'dev': [

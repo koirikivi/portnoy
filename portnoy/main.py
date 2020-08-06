@@ -1,59 +1,138 @@
 import logging
 import os
+import re
 import time
-from uuid import uuid4
+from dataclasses import dataclass
+from datetime import datetime
+from typing import List, Union, Literal
 
 import alpaca_trade_api
+import twitter
 from alpaca_trade_api.common import URL
 from dotenv import load_dotenv
 
 load_dotenv(verbose=True)
 logger = logging.getLogger(__name__)
 
+SLEEP_TIME = 30
+BUY_QTY = 1
 ALPACA_ENDPOINT = os.environ['ALPACA_ENDPOINT']
 ALPACA_API_KEY = os.environ['ALPACA_API_KEY']
 ALPACA_API_SECRET = os.environ['ALPACA_API_SECRET']
 TWITTER_API_KEY = os.environ['TWITTER_API_KEY']
 TWITTER_API_SECRET = os.environ['TWITTER_API_SECRET']
-TWITTER_BEARER_TOKEN = os.environ['TWITTER_BEARER_TOKEN']
+#TWITTER_BEARER_TOKEN = os.environ['TWITTER_BEARER_TOKEN']
+TWITTER_ACCESS_TOKEN_KEY = os.environ['TWITTER_ACCESS_TOKEN_KEY']
+TWITTER_ACCESS_TOKEN_SECRET = os.environ['TWITTER_ACCESS_TOKEN_SECRET']
+
+alpaca_client = alpaca_trade_api.REST(
+    key_id=ALPACA_API_KEY,
+    secret_key=ALPACA_API_SECRET,
+    base_url=URL(ALPACA_ENDPOINT),
+)
+twitter_client = twitter.Api(
+    consumer_key=TWITTER_API_KEY,
+    consumer_secret=TWITTER_API_SECRET,
+    access_token_key=TWITTER_ACCESS_TOKEN_KEY,
+    access_token_secret=TWITTER_ACCESS_TOKEN_SECRET,
+)
+
+
+@dataclass
+class TradeAdvice:
+    type: Union[Literal['buy'], Literal['sell']]
+    symbol: str
+    tweet: twitter.models.Status
 
 
 def main():
     # the main algorithm works like this:
-    # (0. print current positions in alpaca)
     # 1. read all *new* tweets from david portnoy
     # 2. scan everything which contains a ticker symbol
     # 3. for each of those, make a buy or sell on alpaca.exchange using the API
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    alpaca_client = alpaca_trade_api.REST(
-        key_id=ALPACA_API_KEY,
-        secret_key=ALPACA_API_SECRET,
-        base_url=URL(ALPACA_ENDPOINT),
-    )
-    alpaca_account = alpaca_client.get_account()
+    print('Launching portnoy bot')
+    # alpaca_account = alpaca_client.get_account()
+    alpaca_assets = alpaca_client.list_assets()
+    tradable_symbols = set(a.symbol for a in alpaca_assets if a.tradable)
+    print(f'Got {len(tradable_symbols)} assets to trade with')
 
-    print('account:')
-    print(alpaca_account)
-    print('positions:')
-    print(alpaca_client.list_positions())
+    print("Current positions:")
+    for p in alpaca_client.list_positions():
+        print(f"{p.symbol:8}{'':8}{p.side:8}{p.qty} @ {p.avg_entry_price:10}")
+    print("Open orders:")
+    for o in alpaca_client.list_orders():
+        print(f"{o.symbol:8}{o.type:8}{o.side:8}{o.qty} @ {o.limit_price}")
 
-    wait_for_market_open(alpaca_client)
+    since_id = None
+    while True:
+        print('')
+        print(datetime.now().isoformat())
+        # wait_for_market_open()
 
-    #alpaca_client.submit_order(
-    #    symbol='TSLA',
-    #    qty=1,
-    #    side='buy',
-    #    time_in_force='gtc',
-    #    type='limit',
-    #    limit_price='400.00',
-    #    client_order_id=str(uuid4()),
-    #)
-    return alpaca_client, alpaca_account
+        print("Waiting for new tweets...")
+        while True:
+            tweets = twitter_client.GetSearch(
+                term='from:stoolpresidente',
+                count=250,
+                since_id=since_id,
+            )
+            if tweets:
+                since_id = tweets[0].id
+                break
+            else:
+                # print(f"No new tweets, sleeping for {SLEEP_TIME} seconds")
+                time.sleep(SLEEP_TIME)
+
+        print(f"Got {len(tweets)} tweet(s)")
+
+        trade_advices = get_trade_advice(tweets=tweets, tradable_symbols=tradable_symbols)
+        print(f"Got {len(trade_advices)} trade advice(s)")
+
+        for advice in trade_advices:
+            if advice.type == 'buy':
+                print(f'Buying {advice.symbol} based on "{advice.tweet.text}"')
+                # TODO: make limit orders, not market orders
+                alpaca_client.submit_order(
+                    symbol=advice.symbol,
+                    qty=BUY_QTY,
+                    side='buy',
+                    type='market',
+                    time_in_force='day',
+                )
+            elif advice.type == 'sell':
+                print(f'Would sell {advice.symbol} based on "{advice.tweet.text}" but selling not implemented')
+
+        print(f"Sleeping for {SLEEP_TIME} seconds")
+        time.sleep(SLEEP_TIME)
 
 
-def wait_for_market_open(alpaca_client: alpaca_trade_api.REST):
+cashtag_re = re.compile(r'\$[a-zA-Z]+')
+def get_trade_advice(*, tweets, tradable_symbols) -> List[TradeAdvice]:
+    # TODO: now this only buys and never sells.
+    # This is not good, since we have tweets like this: "Whoever gave me $jakk should die"
+    # So we should deduce if a tweet is positive or negative
+    ret = []
+    for tweet in tweets:
+        if '$' not in tweet.text:
+            continue
+        cashtags = cashtag_re.findall(tweet.text)
+        for cashtag in set(cashtags):
+            symbol = cashtag.upper().lstrip('$')
+            if symbol not in tradable_symbols:
+                logger.info('%s is not in tradable symbols', symbol)
+                continue
+            ret.append(TradeAdvice(
+                type='buy',  # always buy!
+                symbol=symbol,
+                tweet=tweet,
+            ))
+    return ret
+
+
+def wait_for_market_open():
     clock = alpaca_client.get_clock()
     if clock.is_open:
         num_seconds = (clock.next_open - clock.timestamp).seconds
