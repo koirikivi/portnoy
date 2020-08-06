@@ -14,7 +14,7 @@ The algorithm is roughly like this:
 Usage
 -----
 
-1. Install python3.8 (3.7 might also work)
+1. Install python3.8 (3.7 and 3.6 might also work)
 2. $ pip3 install python-dotenv alpaca-trade-api python-twitter
 3. Create a file named .env in the same directory as this file, with the following contents:
 
@@ -108,6 +108,7 @@ def main():
     while True:
         print('')
         print(datetime.now().isoformat())
+        # Uncomment the following to not do anything before market opens
         # wait_for_market_open()
 
         print("Waiting for new tweets...")
