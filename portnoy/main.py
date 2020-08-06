@@ -1,3 +1,42 @@
+"""
+Portnoy trading bot
+===================
+
+Trade assets on Alpaca.markets based on Dave Portnoy's (@stoolpresidente) Tweets.
+
+It's currently very bare bones and only makes market buys for each mentioned symbol.
+The algorithm is roughly like this:
+
+1. Get all new tweets from @stoolpresidente
+2. Parse each cashtag (e.g. `$amzn`) from the Tweets
+3. For each tweet and cashtag, make a Market Buy order on Alpaca.markets
+
+Usage
+-----
+
+1. Install python3.8 (3.7 might also work)
+2. $ pip3 install python-dotenv alpaca-trade-api python-twitter
+3. Create a file named .env in the same directory as this file, with the following contents:
+
+    # note: #ALPACA_ENDPOINT=https://paper-api.alpaca.markets for paper trading
+    ALPACA_ENDPOINT=https://api.alpaca.markets
+    ALPACA_API_KEY=<Your alpaca api key goes here>
+    ALPACA_API_SECRET=<Your alpaca api secret goes here>
+    TWITTER_API_KEY=<Your twitter api key goes here>
+    TWITTER_API_SECRET=<Your twitter api secret goes here>
+    TWITTER_ACCESS_TOKEN_KEY=<Your twitter access token key goes here>
+    TWITTER_ACCESS_TOKEN_SECRET=<Your twitter access token secret goes here>
+
+4. $ python3 portnoy.py
+
+Next steps
+----------
+- Sentiment analysis for tweets (positive/negative -> buy/sell).
+  Currently it buys every symbol, even those that have been dissed.
+- Implement selling / shorting
+- Make limit orders instead of market orders?
+- Parse videos (ambitious)
+"""
 import logging
 import os
 import re
@@ -21,7 +60,6 @@ ALPACA_API_KEY = os.environ['ALPACA_API_KEY']
 ALPACA_API_SECRET = os.environ['ALPACA_API_SECRET']
 TWITTER_API_KEY = os.environ['TWITTER_API_KEY']
 TWITTER_API_SECRET = os.environ['TWITTER_API_SECRET']
-#TWITTER_BEARER_TOKEN = os.environ['TWITTER_BEARER_TOKEN']
 TWITTER_ACCESS_TOKEN_KEY = os.environ['TWITTER_ACCESS_TOKEN_KEY']
 TWITTER_ACCESS_TOKEN_SECRET = os.environ['TWITTER_ACCESS_TOKEN_SECRET']
 
@@ -83,7 +121,6 @@ def main():
                 since_id = tweets[0].id
                 break
             else:
-                # print(f"No new tweets, sleeping for {SLEEP_TIME} seconds")
                 time.sleep(SLEEP_TIME)
 
         print(f"Got {len(tweets)} tweet(s)")
