@@ -41,6 +41,7 @@ import logging
 import os
 import re
 import time
+import traceback
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Union, Literal
@@ -106,44 +107,49 @@ def main():
 
     since_id = None
     while True:
-        print('')
-        print(datetime.now().isoformat())
-        # Uncomment the following to not do anything before market opens
-        # wait_for_market_open()
+        try:
+            print('')
+            print(datetime.now().isoformat())
+            # Uncomment the following to not do anything before market opens
+            # wait_for_market_open()
 
-        print("Waiting for new tweets...")
-        while True:
-            tweets = twitter_client.GetSearch(
-                term='from:stoolpresidente',
-                count=250,
-                since_id=since_id,
-            )
-            if tweets:
-                since_id = tweets[0].id
-                break
-            else:
-                time.sleep(SLEEP_TIME)
-
-        print(f"Got {len(tweets)} tweet(s)")
-
-        trade_advices = get_trade_advice(tweets=tweets, tradable_symbols=tradable_symbols)
-        print(f"Got {len(trade_advices)} trade advice(s)")
-
-        for advice in trade_advices:
-            if advice.type == 'buy':
-                print(f'Buying {advice.symbol} based on "{advice.tweet.text}"')
-                # TODO: make limit orders, not market orders
-                alpaca_client.submit_order(
-                    symbol=advice.symbol,
-                    qty=BUY_QTY,
-                    side='buy',
-                    type='market',
-                    time_in_force='day',
+            print("Waiting for new tweets...")
+            while True:
+                tweets = twitter_client.GetSearch(
+                    term='from:stoolpresidente',
+                    count=250,
+                    since_id=since_id,
                 )
-            elif advice.type == 'sell':
-                print(f'Would sell {advice.symbol} based on "{advice.tweet.text}" but selling not implemented')
+                if tweets:
+                    since_id = tweets[0].id
+                    break
+                else:
+                    time.sleep(SLEEP_TIME)
 
-        print(f"Sleeping for {SLEEP_TIME} seconds")
+            print(f"Got {len(tweets)} tweet(s)")
+
+            trade_advices = get_trade_advice(tweets=tweets, tradable_symbols=tradable_symbols)
+            print(f"Got {len(trade_advices)} trade advice(s)")
+
+            for advice in trade_advices:
+                if advice.type == 'buy':
+                    print(f'Buying {advice.symbol} based on "{advice.tweet.text}"')
+                    # TODO: make limit orders, not market orders
+                    alpaca_client.submit_order(
+                        symbol=advice.symbol,
+                        qty=BUY_QTY,
+                        side='buy',
+                        type='market',
+                        time_in_force='day',
+                    )
+                elif advice.type == 'sell':
+                    print(f'Would sell {advice.symbol} based on "{advice.tweet.text}" but selling not implemented')
+
+            print(f"Sleeping for {SLEEP_TIME} seconds")
+        except Exception:  # noqa
+            traceback.print_exc()
+            print('Error caught, sleeping and trying again')
+
         time.sleep(SLEEP_TIME)
 
 
