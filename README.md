@@ -11,7 +11,22 @@ The algorithm is roughly like this:
 2. Parse each cashtag (e.g. `$amzn`) from the Tweets
 3. For each tweet and cashtag, make a Market Buy order on Alpaca.markets
 
+## Installation
+
+```shell script
+$ python3.8 -m venv venv
+$ venv/bin/pip install -r requirements.txt
+$ venv/bin/pip install -e .
+```
+
+## Installation
+
+```shell script
+$ venv/bin/python -m portnoy
+```
+
 ## TODO
+- Store id of last processed tweet and use it in `since_id`
 - Sentiment analysis for tweets (positive/negative -> buy/sell).
   Currently it buys every symbol, even those that have been dissed.
 - Implement selling / shorting
