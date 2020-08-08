@@ -2,6 +2,8 @@
  
 Trade assets on Alpaca.markets based on Dave Portnoy's (@stoolpresidente) Tweets.
 
+![Bot in use](https://raw.githubusercontent.com/koirikivi/portnoy/master/assets/bot-in-use.png)
+
 It's currently very bare bones and only makes market buys for each mentioned symbol.
 The algorithm is roughly like this:
 
