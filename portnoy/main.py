@@ -44,6 +44,8 @@ import time
 import traceback
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
+import sys
 from typing import List, Union, Literal
 
 import alpaca_trade_api
@@ -57,6 +59,9 @@ logger = logging.getLogger(__name__)
 SLEEP_TIME = 30
 BUY_QTY = 1
 PORTNOY_TWITTER_USERNAME = 'stoolpresidente'
+BASE_DIR = Path(__file__).parent.parent.resolve()
+LAST_PROCESSED_TWEET_FILE = BASE_DIR / '.last_processed_tweet'
+
 ALPACA_ENDPOINT = os.environ['ALPACA_ENDPOINT']
 ALPACA_API_KEY = os.environ['ALPACA_API_KEY']
 ALPACA_API_SECRET = os.environ['ALPACA_API_SECRET']
@@ -107,7 +112,6 @@ def main():
     for o in alpaca_client.list_orders():
         print(f"{o.symbol:8}{o.type:8}{o.side:8}{o.qty} @ {o.limit_price}")
 
-    since_id = None
     while True:
         try:
             print('')
@@ -115,18 +119,7 @@ def main():
             # Uncomment the following to not do anything before market opens
             # wait_for_market_open()
 
-            print("Waiting for new tweets...")
-            while True:
-                tweets = twitter_client.GetUserTimeline(
-                    screen_name=PORTNOY_TWITTER_USERNAME,
-                    count=50,
-                    since_id=since_id,
-                )
-                if tweets:
-                    since_id = tweets[0].id
-                    break
-                else:
-                    time.sleep(SLEEP_TIME)
+            tweets = fetch_new_tweets()
 
             print(f"Got {len(tweets)} tweet(s)")
 
@@ -148,11 +141,36 @@ def main():
                     print(f'Would sell {advice.symbol} based on "{advice.tweet.full_text}" but selling not implemented')
 
             print(f"Sleeping for {SLEEP_TIME} seconds")
+        except KeyboardInterrupt:
+            print("Bye bye!")
+            sys.exit()
         except Exception:  # noqa
             traceback.print_exc()
             print('Error caught, sleeping and trying again')
 
         time.sleep(SLEEP_TIME)
+
+
+def fetch_new_tweets():
+    since_id = None
+    if LAST_PROCESSED_TWEET_FILE.exists():
+        with open(LAST_PROCESSED_TWEET_FILE) as f:
+            since_id = int(f.read().strip())
+
+    print(f'Waiting for new tweets... (since {since_id})')
+    while True:
+        tweets = twitter_client.GetUserTimeline(
+            screen_name=PORTNOY_TWITTER_USERNAME,
+            count=50,
+            since_id=since_id,
+        )
+        if tweets:
+            since_id = tweets[0].id
+            with open(LAST_PROCESSED_TWEET_FILE, 'w') as f:
+                f.write(str(since_id))
+            return tweets
+        else:
+            time.sleep(SLEEP_TIME)
 
 
 cashtag_re = re.compile(r'\$[a-zA-Z]+')
