@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+
+  app:
+    build: .
+    image: portnoy-trader
+    command: python main.py
+    networks:
+     - backend
+
+networks:
+  backend:
