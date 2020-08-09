@@ -56,6 +56,7 @@ logger = logging.getLogger(__name__)
 
 SLEEP_TIME = 30
 BUY_QTY = 1
+PORTNOY_TWITTER_USERNAME = 'stoolpresidente'
 ALPACA_ENDPOINT = os.environ['ALPACA_ENDPOINT']
 ALPACA_API_KEY = os.environ['ALPACA_API_KEY']
 ALPACA_API_SECRET = os.environ['ALPACA_API_SECRET']
@@ -74,6 +75,7 @@ twitter_client = twitter.Api(
     consumer_secret=TWITTER_API_SECRET,
     access_token_key=TWITTER_ACCESS_TOKEN_KEY,
     access_token_secret=TWITTER_ACCESS_TOKEN_SECRET,
+    tweet_mode='extended',  # don't truncate it, use full_text instead of text
 )
 
 
@@ -115,9 +117,9 @@ def main():
 
             print("Waiting for new tweets...")
             while True:
-                tweets = twitter_client.GetSearch(
-                    term='from:stoolpresidente',
-                    count=250,
+                tweets = twitter_client.GetUserTimeline(
+                    screen_name=PORTNOY_TWITTER_USERNAME,
+                    count=50,
                     since_id=since_id,
                 )
                 if tweets:
@@ -133,7 +135,7 @@ def main():
 
             for advice in trade_advices:
                 if advice.type == 'buy':
-                    print(f'Buying {advice.symbol} based on "{advice.tweet.text}"')
+                    print(f'Buying {advice.symbol} based on "{advice.tweet.full_text}"')
                     # TODO: make limit orders, not market orders
                     alpaca_client.submit_order(
                         symbol=advice.symbol,
@@ -143,7 +145,7 @@ def main():
                         time_in_force='day',
                     )
                 elif advice.type == 'sell':
-                    print(f'Would sell {advice.symbol} based on "{advice.tweet.text}" but selling not implemented')
+                    print(f'Would sell {advice.symbol} based on "{advice.tweet.full_text}" but selling not implemented')
 
             print(f"Sleeping for {SLEEP_TIME} seconds")
         except Exception:  # noqa
@@ -160,9 +162,9 @@ def get_trade_advice(*, tweets, tradable_symbols) -> List[TradeAdvice]:
     # So we should deduce if a tweet is positive or negative
     ret = []
     for tweet in tweets:
-        if '$' not in tweet.text:
+        if '$' not in tweet.full_text:
             continue
-        cashtags = cashtag_re.findall(tweet.text)
+        cashtags = cashtag_re.findall(tweet.full_text)
         for cashtag in set(cashtags):
             symbol = cashtag.upper().lstrip('$')
             if symbol not in tradable_symbols:
