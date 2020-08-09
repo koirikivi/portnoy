@@ -84,9 +84,12 @@ twitter_client = twitter.Api(
 )
 
 
+TradeAction = Literal['buy', 'sell']
+
+
 @dataclass
 class TradeAdvice:
-    type: Union[Literal['buy'], Literal['sell']]
+    type: TradeAction
     symbol: str
     tweet: twitter.models.Status
 
@@ -175,13 +178,12 @@ def fetch_new_tweets():
 
 cashtag_re = re.compile(r'\$[a-zA-Z]+')
 def get_trade_advice(*, tweets, tradable_symbols) -> List[TradeAdvice]:
-    # TODO: now this only buys and never sells.
-    # This is not good, since we have tweets like this: "Whoever gave me $jakk should die"
-    # So we should deduce if a tweet is positive or negative
     ret = []
     for tweet in tweets:
         if '$' not in tweet.full_text:
             continue
+
+        action = decide_buy_or_sell(tweet.full_text)
         cashtags = cashtag_re.findall(tweet.full_text)
         for cashtag in set(cashtags):
             symbol = cashtag.upper().lstrip('$')
@@ -189,11 +191,18 @@ def get_trade_advice(*, tweets, tradable_symbols) -> List[TradeAdvice]:
                 logger.info('%s is not in tradable symbols', symbol)
                 continue
             ret.append(TradeAdvice(
-                type='buy',  # always buy!
+                type=action,
                 symbol=symbol,
                 tweet=tweet,
             ))
     return ret
+
+
+def decide_buy_or_sell(tweet_text: str) -> TradeAction:
+    # TODO: implement this. now it only buys and never sells.
+    # This is not good, since we have tweets like this: "Whoever gave me $jakk should die"
+    # So we should deduce if a tweet is positive or negative
+    return 'buy'
 
 
 def wait_for_market_open():
