@@ -37,7 +37,7 @@ BUY_QTY = 1
 PORTNOY_TWITTER_USERNAME = 'stoolpresidente'
 BASE_DIR = Path(__file__).parent.parent.resolve()
 VAR_DIR = BASE_DIR / 'var'
-LAST_PROCESSED_TWEET_FILE = VAR_DIR / '.last_processed_tweet'
+LAST_PROCESSED_TWEET_FILE = VAR_DIR / 'last_processed_tweet'
 
 ALPACA_ENDPOINT = os.environ['ALPACA_ENDPOINT']
 ALPACA_API_KEY = os.environ['ALPACA_API_KEY']
