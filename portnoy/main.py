@@ -11,31 +11,7 @@ The algorithm is roughly like this:
 2. Parse each cashtag (e.g. `$amzn`) from the Tweets
 3. For each tweet and cashtag, make a Market Buy order on Alpaca.markets
 
-Usage
------
-
-1. Install python3.8 (3.7 and 3.6 might also work)
-2. $ pip3 install python-dotenv alpaca-trade-api python-twitter
-3. Create a file named .env in the same directory as this file, with the following contents:
-
-    # note: #ALPACA_ENDPOINT=https://paper-api.alpaca.markets for paper trading
-    ALPACA_ENDPOINT=https://api.alpaca.markets
-    ALPACA_API_KEY=<Your alpaca api key goes here>
-    ALPACA_API_SECRET=<Your alpaca api secret goes here>
-    TWITTER_API_KEY=<Your twitter api key goes here>
-    TWITTER_API_SECRET=<Your twitter api secret goes here>
-    TWITTER_ACCESS_TOKEN_KEY=<Your twitter access token key goes here>
-    TWITTER_ACCESS_TOKEN_SECRET=<Your twitter access token secret goes here>
-
-4. $ python3 portnoy.py
-
-Next steps
-----------
-- Sentiment analysis for tweets (positive/negative -> buy/sell).
-  Currently it buys every symbol, even those that have been dissed.
-- Implement selling / shorting
-- Make limit orders instead of market orders?
-- Parse videos (ambitious)
+Read README.md for details on how to run.
 """
 import logging
 import os
@@ -60,7 +36,8 @@ SLEEP_TIME = 30
 BUY_QTY = 1
 PORTNOY_TWITTER_USERNAME = 'stoolpresidente'
 BASE_DIR = Path(__file__).parent.parent.resolve()
-LAST_PROCESSED_TWEET_FILE = BASE_DIR / '.last_processed_tweet'
+VAR_DIR = BASE_DIR / 'var'
+LAST_PROCESSED_TWEET_FILE = VAR_DIR / '.last_processed_tweet'
 
 ALPACA_ENDPOINT = os.environ['ALPACA_ENDPOINT']
 ALPACA_API_KEY = os.environ['ALPACA_API_KEY']
@@ -101,6 +78,7 @@ def main():
     # 3. for each of those, make a buy or sell on alpaca.exchange using the API
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    os.makedirs(VAR_DIR, exist_ok=True)
 
     print('Launching portnoy bot')
     # alpaca_account = alpaca_client.get_account()
