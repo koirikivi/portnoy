@@ -13,6 +13,7 @@ The algorithm is roughly like this:
 
 Read README.md for details on how to run.
 """
+import functools
 import logging
 import os
 import re
@@ -69,6 +70,10 @@ class TradeAdvice:
     type: TradeAction
     symbol: str
     tweet: twitter.models.Status
+
+
+# HACK: flush prints automatically to make piping to `tee` work
+print = functools.partial(print, flush=True)
 
 
 def main():
