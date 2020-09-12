@@ -112,19 +112,8 @@ def main():
             trade_advices = get_trade_advice(tweets=tweets, tradable_symbols=tradable_symbols)
             print(f"Got {len(trade_advices)} trade advice(s)")
 
-            for advice in trade_advices:
-                if advice.type == 'buy':
-                    print(f'Buying {advice.symbol} based on "{advice.tweet.full_text}"')
-                    # TODO: make limit orders, not market orders
-                    alpaca_client.submit_order(
-                        symbol=advice.symbol,
-                        qty=BUY_QTY,
-                        side='buy',
-                        type='market',
-                        time_in_force='day',
-                    )
-                elif advice.type == 'sell':
-                    print(f'Would sell {advice.symbol} based on "{advice.tweet.full_text}" but selling not implemented')
+            if trade_advices:
+                make_trades(trade_advices)
 
             print(f"Sleeping for {SLEEP_TIME} seconds")
         except KeyboardInterrupt:
@@ -135,6 +124,41 @@ def main():
             print('Error caught, sleeping and trying again')
 
         time.sleep(SLEEP_TIME)
+
+
+def make_trades(trade_advices: List[TradeAdvice]):
+    if not trade_advices:
+        return
+
+    for advice in trade_advices:
+        if advice.type == 'buy':
+            print(f'Buying {advice.symbol} based on "{advice.tweet.full_text}"')
+            # TODO: make limit orders, not market orders
+            qty = BUY_QTY
+            alpaca_client.submit_order(
+                symbol=advice.symbol,
+                qty=qty,
+                side='buy',
+                type='market',
+                time_in_force='day',
+            )
+            post_trade_tweet(advice=advice, quantity=qty)
+        elif advice.type == 'sell':
+            print(f'Would sell {advice.symbol} based on "{advice.tweet.full_text}" but selling not implemented')
+
+
+def post_trade_tweet(
+    *,
+    advice: TradeAdvice,
+    quantity: int,  # noqa
+):
+    verb = 'BUYING' if advice.type == 'buy' else 'SELLING'
+    postfix = 'TO THE MOON!!📈' if advice.type == 'buy' else '📉'
+    tweet_text = f'{verb} {advice.symbol}! {postfix}'
+    # TODO: maybe add retweet or media
+    twitter_client.PostUpdate(
+        status=tweet_text,
+    )
 
 
 def fetch_new_tweets():
