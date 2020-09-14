@@ -33,6 +33,7 @@ from dotenv import load_dotenv
 load_dotenv(verbose=True)
 logger = logging.getLogger(__name__)
 
+MAX_TWEETS = 250
 SLEEP_TIME = 30
 BUY_QTY = 1
 PORTNOY_TWITTER_USERNAME = 'stoolpresidente'
@@ -171,7 +172,7 @@ def fetch_new_tweets():
     while True:
         tweets = twitter_client.GetUserTimeline(
             screen_name=PORTNOY_TWITTER_USERNAME,
-            count=50,
+            count=MAX_TWEETS,
             since_id=since_id,
         )
         if tweets:
