@@ -120,8 +120,9 @@ def main():
         except KeyboardInterrupt:
             print("Bye bye!")
             sys.exit()
-        except Exception:  # noqa
-            traceback.print_exc()
+        except Exception as e:  # noqa
+            print(e)
+            traceback.print_exc(file=sys.stdout)
             print('Error caught, sleeping and trying again')
 
         time.sleep(SLEEP_TIME)
